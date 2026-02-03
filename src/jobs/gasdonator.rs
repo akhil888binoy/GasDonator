@@ -158,7 +158,7 @@ async fn process_single_request(
     }
 
     let pending_wallet = pending_wallet.unwrap();
-    println!("Wallet {} in Worker {} loop", pending_wallet.wallet_address, worker_id);
+    println!("Wallet : {} in Worker : {}", pending_wallet.wallet_address, worker_id);
     let wallet_address: Address = pending_wallet.wallet_address.parse().map_err(|e|{
         eprintln!("Invalid wallet address {:?}",e);
         AppError::BadRequest("Invalid wallet address".to_string())
