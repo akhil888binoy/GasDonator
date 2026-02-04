@@ -2,7 +2,7 @@
 
 use crate::error::error::AppError;
 use crate::state_models::models::DbConnection;
-use crate::{jobs::gasdonator::donate_wallet, suspicious_activities::activity_monitor::ActivityMonitor};
+use crate::{jobs::gasdonator::donate_wallet};
 use std::time::Duration;  
 use sea_orm::ConnectionTrait;
 use tokio;

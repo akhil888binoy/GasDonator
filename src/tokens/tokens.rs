@@ -17,20 +17,20 @@ pub enum TokenError {
 pub static TOKENS: Lazy<HashMap<String, HashMap<&'static str, Address>>> = Lazy::new(|| {
     let mut map = HashMap::new();
 
-    let base_mainnet = HashMap::from([
-        ("USDC", Address::from_str("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913").unwrap()),
-    ]);
+    // let base_mainnet = HashMap::from([
+    //     ("USDC", Address::from_str("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913").unwrap()),
+    // ]);
 
-    let bnb_mainnet = HashMap::from([
-        (
-            "USDC",
-            Address::from_str("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d").unwrap(),
-        ),
-        (
-            "USDT",
-            Address::from_str("0x55d398326f99059fF775485246999027B3197955").unwrap(),
-        )
-    ]);   
+    // let bnb_mainnet = HashMap::from([
+    //     (
+    //         "USDC",
+    //         Address::from_str("0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d").unwrap(),
+    //     ),
+    //     (
+    //         "USDT",
+    //         Address::from_str("0x55d398326f99059fF775485246999027B3197955").unwrap(),
+    //     )
+    // ]);   
 
     let base_sepolia = HashMap::from([
         (
@@ -43,16 +43,16 @@ pub static TOKENS: Lazy<HashMap<String, HashMap<&'static str, Address>>> = Lazy:
         )
     ]);   
 
-    let ethereum_mainnet = HashMap::from([
-        (
-            "USDC",
-            Address::from_str("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48").unwrap(),
-        ),
-        (
-            "USDT",
-            Address::from_str("0xdAC17F958D2ee523a2206206994597C13D831ec7").unwrap(),
-        )
-    ]);   
+    // let ethereum_mainnet = HashMap::from([
+    //     (
+    //         "USDC",
+    //         Address::from_str("0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48").unwrap(),
+    //     ),
+    //     (
+    //         "USDT",
+    //         Address::from_str("0xdAC17F958D2ee523a2206206994597C13D831ec7").unwrap(),
+    //     )
+    // ]);   
 
 
     // map.insert("bnb_mainnet".to_string(), bnb_mainnet);

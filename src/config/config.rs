@@ -32,7 +32,9 @@ pub struct AppConfig {
 
     pub signer2: String,
 
-    pub signer3: String
+    pub signer3: String,
+
+    pub master_wallet_address : String ,
 
 }
 
@@ -65,6 +67,8 @@ impl AppConfig {
                 .map_err(|e| AppError::ConfigError(format!("SIGNER2 not set: {}", e)))?,
             signer3:env::var("SIGNER3")
                 .map_err(|e| AppError::ConfigError(format!("SIGNER3 not set: {}", e)))?,
+            master_wallet_address:env::var("MASTER_WALLET_ADDRESS")
+                .map_err(|e| AppError::ConfigError(format!("MASTER_WALLET_ADDRESS not set: {}", e)))?,
         })
     }
 }

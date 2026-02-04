@@ -1,24 +1,18 @@
-use std::{default, time::Duration};
+use std::{ str::FromStr, time::Duration};
 
 use alloy::{
     network::TransactionBuilder, primitives::{ Address, U256, utils::parse_ether}, providers::Provider, rpc::types::TransactionRequest, sol
 };
-use chrono::{Utc , Duration as ChronoDuration};
-use futures::future::pending;
 use rust_decimal::{Decimal};
 use sea_orm::{
-    ActiveModelTrait, ActiveValue::{NotSet, Set}, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, TransactionTrait, prelude::Expr
+    ActiveModelTrait, ActiveValue::{ Set}, ColumnTrait, EntityTrait, QueryFilter, QueryOrder, QuerySelect, TransactionTrait
 };
 use uuid::Uuid;
 
-use rust_decimal::prelude::ToPrimitive;
 use tracing::{error, warn};
 use tokio::time::sleep;
-use lettre::message::{ header::ContentType};
-use lettre::transport::smtp::authentication::Credentials;
-use lettre::{Message, SmtpTransport, Transport};
 use crate::{
-    chain_config::chain_config::{CHAIN_RPC, create_provider}, config::config::AppConfig, entities::{admin_limits, cash_table, gas_donation, prelude::{GasDonation, UserWallet}, user_balance, user_wallet, withdraw_receipt, withdraw_request::{self, Entity as WithdrawRequest}}, error::error::AppError, jobs::index::{MAX_RETRIES, RETRY_BACKOFF, between_cycles_cleanup}, state_models::models::DbConnection, suspicious_activities::activity_monitor::ActivityMonitor, tokens::tokens::TOKENS,
+    chain_config::chain_config::{ create_provider}, config::config::AppConfig, entities::{ gas_donation, prelude::{ UserWallet},  user_wallet}, error::error::AppError, jobs::index::{MAX_RETRIES, RETRY_BACKOFF, between_cycles_cleanup}, state_models::models::DbConnection,  tokens::tokens::TOKENS,
 };
 
 
@@ -146,8 +140,9 @@ async fn process_single_request(
     db: &DbConnection,
 )->Result<(), AppError> {
 
+    let config = AppConfig::from_env()?;
     let txn = db.0.begin().await.map_err(AppError::DbError)?;
-    let MIN_GAS = parse_ether("0.0000000000000190").unwrap();
+    let master_wallet_address = Address::from_str(config.master_wallet_address.as_str()).unwrap() ;
     let pending_wallet = UserWallet::find_by_id(user_wallet_id)
     .lock_exclusive()
     .one(&txn)
@@ -169,8 +164,10 @@ async fn process_single_request(
 
     for (chain_name , tokens) in TOKENS.iter(){
         println!("Checking Chain {} on Wallet {}", chain_name, wallet_address);
-        let mut usdc_token_balance= U256::from(0) ;
-        let mut usdt_token_balance= U256::from(0);
+        let mut usdc_token_balance = U256::ZERO ;
+        let mut usdt_token_balance= U256::ZERO;
+        let mut total_gas_units = 0;
+
         let provider = create_provider(&chain_name, worker_id).await.map_err(|e| {
             eprintln!("Cannot create provider on  {:?}: {:?}", chain_name, e);
             AppError::InternalError(format!("Provider error: {e}"))
@@ -179,48 +176,111 @@ async fn process_single_request(
         let  gas_balance  = provider.0.get_balance(wallet_address).await.map_err(|e| AppError::InternalError(format!("Cannot fetch native balance: {e}")))?;
     
         for (token_name , token_address) in tokens {
+
             let erc20 = ERC20::new(*token_address, &provider.0);
+
             if token_name ==  &"USDC" {
 
                 usdc_token_balance  = erc20.balanceOf(wallet_address).call().await.map_err(|e|{   
                         eprintln!("Error fetching USDC balance for {:?}: {:?}", wallet_address, e);
                         AppError::InternalError(format!("Provider error: {e}"))
                     })?;
+                
+                if usdc_token_balance > U256::ZERO {
+
+                    let call = erc20.transfer(master_wallet_address, U256::from(1));
+
+                    let usdc_transfer_gas = call.from(wallet_address)
+                        .estimate_gas()
+                        .await.map_err(|e|{
+                        eprintln!("Error Cannot estimate gas {:?}: {:?}", wallet_address, e);
+                        AppError::InternalError(format!("Error Cannot estimate gas : {e}"))
+                    } )?;
+
+                    total_gas_units += usdc_transfer_gas;
+                }
+
+
                 // println!("Checking balance of  token {} on Wallet {} = {}", token_name, wallet_address, usdc_token_balance);
+            
             }else {
+
                 usdt_token_balance  = erc20.balanceOf(wallet_address).call().await.map_err(|e|{
                     eprintln!("Error fetching USDT balance for {:?}: {:?}", wallet_address, e);
                     AppError::InternalError(format!("Provider error: {e}"))
                 } )?;
-                // println!("Checking balance of  token {} on Wallet {} = {}", token_name, wallet_address, usdt_token_balance);
+
+            if usdt_token_balance > U256::ZERO {
+                let call = erc20.transfer(master_wallet_address, U256::from(1));
+
+                let usdt_transfer_gas = call.from(wallet_address)
+                    .estimate_gas()
+                    .await.map_err(|e|{
+                    eprintln!("Error Cannot estimate gas {:?}: {:?}", wallet_address, e);
+                    AppError::InternalError(format!("Error Cannot estimate gas : {e}"))
+                } )?;
+
+                total_gas_units += usdt_transfer_gas;
+
+            }
+
             }
         }
 
-        if (usdc_token_balance > U256::from(0) || usdt_token_balance > U256::from(0))  &&  gas_balance < MIN_GAS{
+        let gas_price = provider.0.get_gas_price().await.map_err(|e|{
+                    eprintln!("Error Cannot get gas price {:?}: {:?}", wallet_address, e);
+                    AppError::InternalError(format!("Error Cannot get gas price : {e}"))
+            } )?;
+
+        let total_gas_units_u256 = U256::from(total_gas_units);
+        let mut  minimum_gas = total_gas_units_u256 * U256::from(gas_price);
+
+        // +20% buffer
+        let buffer = minimum_gas / U256::from(5);
+
+        minimum_gas += buffer;
+
+        let deficit = minimum_gas.saturating_sub(gas_balance);
+        
+        println!("Total Gas Unites :{}", total_gas_units);
+        println!("Gas Price :{}", gas_price);
+        println!("Minimum Gas Needed {}", minimum_gas );
+        println!("Deficit Gas Sent {}", deficit);
+
+        if (usdc_token_balance > U256::from(0) || usdt_token_balance > U256::from(0))  &&  gas_balance < minimum_gas  {
+
             println!("Eligible for gas Wallet : {}", wallet_address);
-            let tx = TransactionRequest::default().with_to(wallet_address).with_value(U256::from(1));
-            provider.0.send_transaction(tx).await.map_err(|e| {
-                eprintln!("Failed to send gas {:?}: {:?}", wallet_address, e);
-                AppError::InternalError(format!("Provider error: {e}"))
-        })?.get_receipt().await.map_err(|e|{
-            eprintln!("Failed to get receipt {:?}: {:?}", wallet_address, e);
-            AppError::InternalError(format!("Failed to get receipt: {e}"))
-        })?;
-            
-            gas_donation::ActiveModel{
-                id: Set(Uuid::new_v4()),
-                user_id: Set(user_id),
-                wallet_address: Set(wallet_address.to_string()),
-                chain : Set(chain_name.clone()),
-                gas: Set(Decimal::from(100)),
-                created_at: Set(chrono::Utc::now().into()),
+
+            let min_topup = parse_ether("0.000001").unwrap();
+
+            if deficit >= min_topup {
+                println!("Passed Dust Condition {}", wallet_address);
+                let tx = TransactionRequest::default().with_to(wallet_address).with_value(deficit);
+
+                provider.0.send_transaction(tx).await.map_err(|e| {
+                    eprintln!("Failed to send gas {:?}: {:?}", wallet_address, e);
+                    AppError::InternalError(format!("Provider error: {e}"))
+                })?.get_receipt().await.map_err(|e|{
+                    eprintln!("Failed to get receipt {:?}: {:?}", wallet_address, e);
+                    AppError::InternalError(format!("Failed to get receipt: {e}"))
+                })?;
+                
+                gas_donation::ActiveModel{
+                    id: Set(Uuid::new_v4()),
+                    user_id: Set(user_id),
+                    wallet_address: Set(wallet_address.to_string()),
+                    chain : Set(chain_name.clone()),
+                    gas: Set(Decimal::from_str(&deficit.to_string()).unwrap()),
+                    created_at: Set(chrono::Utc::now().into()),
+                }
+                .insert(&txn)
+                        .await
+                        .map_err(|e|{
+                            eprintln!("Failed to inser to DB {:?}", e);
+                            AppError::DbError(e)
+                        })?;
             }
-            .insert(&txn)
-                    .await
-                    .map_err(|e|{
-                        eprintln!("Failed to inser to DB {:?}", e);
-                        AppError::DbError(e)
-                    })?;
+            
         }else{
             println!("No Gas Needed  for Wallet : {} on chain {}", wallet_address, chain_name );
         }
