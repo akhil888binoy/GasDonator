@@ -250,13 +250,7 @@ async fn process_single_request(
         if (usdc_token_balance > U256::from(0) || usdt_token_balance > U256::from(0))  &&  gas_balance < minimum_gas  {
 
             println!("Eligible for gas Wallet : {}", wallet_address);
-
-            let min_topup = parse_ether("0.000000001").unwrap();
-
-            if deficit >= min_topup {
-
-                println!("Passed Dust Condition {}", wallet_address);
-                let tx = TransactionRequest::default().with_to(wallet_address).with_value(deficit);
+            let tx = TransactionRequest::default().with_to(wallet_address).with_value(deficit);
 
                 provider.0.send_transaction(tx).await.map_err(|e| {
                     eprintln!("Failed to send gas {:?}: {:?}", wallet_address, e);
@@ -280,7 +274,7 @@ async fn process_single_request(
                             eprintln!("Failed to inser to DB {:?}", e);
                             AppError::DbError(e)
                         })?;
-            }
+
             
         }else{
             println!("No Gas Needed  for Wallet : {} on chain {}", wallet_address, chain_name );
