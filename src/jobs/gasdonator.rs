@@ -251,9 +251,10 @@ async fn process_single_request(
 
             println!("Eligible for gas Wallet : {}", wallet_address);
 
-            let min_topup = parse_ether("0.000001").unwrap();
+            let min_topup = parse_ether("0.000000001").unwrap();
 
             if deficit >= min_topup {
+
                 println!("Passed Dust Condition {}", wallet_address);
                 let tx = TransactionRequest::default().with_to(wallet_address).with_value(deficit);
 
