@@ -236,9 +236,10 @@ async fn process_single_request(
         let mut  minimum_gas = total_gas_units_u256 * U256::from(gas_price);
 
         // +20% buffer
-        let buffer = minimum_gas / U256::from(5);
+        // let buffer = minimum_gas / U256::from(5);
 
-        minimum_gas += buffer;
+        minimum_gas = minimum_gas * U256::from(2);
+
 
         let deficit = minimum_gas.saturating_sub(gas_balance);
         
@@ -251,7 +252,7 @@ async fn process_single_request(
 
             println!("Eligible for gas Wallet : {}", wallet_address);
 
-            let min_topup = parse_ether("0.00000001").unwrap();
+            let min_topup = parse_ether("0.0000001").unwrap();
 
             if deficit >= min_topup {
 
