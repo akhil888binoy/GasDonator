@@ -202,7 +202,6 @@ async fn process_single_request(
                     total_gas_units += usdc_transfer_gas;
                 }
 
-
                 // println!("Checking balance of  token {} on Wallet {} = {}", token_name, wallet_address, usdc_token_balance);
             
             }else {
@@ -286,7 +285,9 @@ async fn process_single_request(
                                                     eprintln!("Failed to inser to DB {:?}", e);
                                                     AppError::DbError(e)
                                                 })?;
-                                    }
+                        }else {
+                                        is_sweepable = true;
+                    }
             }else{
                 println!("No More Gas Needed  for Wallet : {} on chain {}", wallet_address, chain_name );
                 is_sweepable = true;
