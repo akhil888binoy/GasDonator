@@ -200,6 +200,7 @@ async fn process_single_request(
                     } )?;
 
                     total_gas_units += usdc_transfer_gas;
+                    sweepable_chains +=1;
                 }
 
 
@@ -221,12 +222,11 @@ async fn process_single_request(
                     eprintln!("Error Cannot estimate gas {:?}: {:?}", wallet_address, e);
                     AppError::InternalError(format!("Error Cannot estimate gas : {e}"))
                 } )?;
-
-                total_gas_units += usdt_transfer_gas;
-
+                    total_gas_units += usdt_transfer_gas;
+                    sweepable_chains +=1;
                 }
             }
-            sweepable_chains +=1;
+            
         }
 
         let gas_price = provider.0.get_gas_price().await.map_err(|e|{
