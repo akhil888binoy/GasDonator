@@ -141,7 +141,7 @@ async fn process_single_request(
 )->Result<(), AppError> {
 
     let config = AppConfig::from_env()?;
-    let mut sweepable_chains =0;
+    let mut is_sweepable =false;
     let txn = db.0.begin().await.map_err(AppError::DbError)?;
 
     let master_wallet_address = Address::from_str(config.master_wallet_address.as_str()).unwrap() ;
@@ -200,7 +200,6 @@ async fn process_single_request(
                     } )?;
 
                     total_gas_units += usdc_transfer_gas;
-                    sweepable_chains +=1;
                 }
 
 
@@ -223,7 +222,6 @@ async fn process_single_request(
                     AppError::InternalError(format!("Error Cannot estimate gas : {e}"))
                 } )?;
                     total_gas_units += usdt_transfer_gas;
-                    sweepable_chains +=1;
                 }
             }
             
@@ -250,7 +248,7 @@ async fn process_single_request(
         println!("Minimum Gas Needed {}", minimum_gas );
         println!("Deficit Gas Sent {}", deficit);
 
-        if (usdc_token_balance > U256::from(0) || usdt_token_balance > U256::from(0))  &&  gas_balance < minimum_gas  {
+        if (usdc_token_balance > U256::from(0) || usdt_token_balance > U256::from(0))  &&  gas_balance <= minimum_gas  {
 
             println!("Eligible for gas Wallet : {}", wallet_address);
 
@@ -269,6 +267,8 @@ async fn process_single_request(
                     AppError::InternalError(format!("Failed to get receipt: {e}"))
                 })?;
                 
+                is_sweepable = true;
+
                 gas_donation::ActiveModel{
                     id: Set(Uuid::new_v4()),
                     user_id: Set(user_id),
@@ -291,16 +291,16 @@ async fn process_single_request(
 
     }
 
-    println!("Sweepable Chains {}", sweepable_chains);
+    println!("Is Sweepable  {}", is_sweepable);
 
-    if sweepable_chains> 0 {
+    if is_sweepable {
         let mut complete_request: user_wallet::ActiveModel = pending_wallet.into();
                         complete_request.status = Set("SWEEPABLE".to_string());
                         complete_request
                         .update(&txn)
                         .await
                         .map_err(AppError::DbError)?;
-    }else{
+    }else {
         let mut complete_request: user_wallet::ActiveModel = pending_wallet.into();
                         complete_request.status = Set("FREE".to_string());
                         complete_request
