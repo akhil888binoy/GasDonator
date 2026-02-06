@@ -141,7 +141,9 @@ async fn process_single_request(
 )->Result<(), AppError> {
 
     let config = AppConfig::from_env()?;
+    let mut sweepable_chains =0;
     let txn = db.0.begin().await.map_err(AppError::DbError)?;
+
     let master_wallet_address = Address::from_str(config.master_wallet_address.as_str()).unwrap() ;
     let pending_wallet = UserWallet::find_by_id(user_wallet_id)
     .lock_exclusive()
@@ -222,9 +224,9 @@ async fn process_single_request(
 
                 total_gas_units += usdt_transfer_gas;
 
+                }
             }
-
-            }
+            sweepable_chains +=1;
         }
 
         let gas_price = provider.0.get_gas_price().await.map_err(|e|{
@@ -288,13 +290,24 @@ async fn process_single_request(
         }
 
     }
-    println!("Reached Sweepable line");
-    let mut complete_request: user_wallet::ActiveModel = pending_wallet.into();
+
+    println!("Sweepable Chains {}", sweepable_chains);
+
+    if sweepable_chains> 0 {
+        let mut complete_request: user_wallet::ActiveModel = pending_wallet.into();
                         complete_request.status = Set("SWEEPABLE".to_string());
                         complete_request
                         .update(&txn)
                         .await
                         .map_err(AppError::DbError)?;
+    }else{
+        let mut complete_request: user_wallet::ActiveModel = pending_wallet.into();
+                        complete_request.status = Set("FREE".to_string());
+                        complete_request
+                        .update(&txn)
+                        .await
+                        .map_err(AppError::DbError)?;
+    }
 
     txn.commit().await.map_err(AppError::DbError)?;
 
