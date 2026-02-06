@@ -245,7 +245,7 @@ async fn process_single_request(
 
         let deficit = minimum_gas.saturating_sub(gas_balance);
         
-        println!("Total Gas Unites :{}", total_gas_units);
+        println!("Total Gas Units :{}", total_gas_units);
         println!("Gas Price :{}", gas_price);
         println!("Minimum Gas Needed {}", minimum_gas );
         println!("Deficit Gas Sent {}", deficit);
