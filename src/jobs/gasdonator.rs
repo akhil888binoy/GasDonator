@@ -290,7 +290,7 @@ async fn process_single_request(
     }
 
     let mut complete_request: user_wallet::ActiveModel = pending_wallet.into();
-                        complete_request.status = Set("FREE".to_string());
+                        complete_request.status = Set("SWEEPABLE".to_string());
                         complete_request
                         .update(&txn)
                         .await
