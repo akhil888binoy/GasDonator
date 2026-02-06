@@ -288,7 +288,7 @@ async fn process_single_request(
         }
 
     }
-
+    println!("Reached Sweepable line");
     let mut complete_request: user_wallet::ActiveModel = pending_wallet.into();
                         complete_request.status = Set("SWEEPABLE".to_string());
                         complete_request
