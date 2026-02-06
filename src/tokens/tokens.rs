@@ -35,7 +35,7 @@ pub static TOKENS: Lazy<HashMap<String, HashMap<&'static str, Address>>> = Lazy:
     let base_sepolia = HashMap::from([
         (
             "USDC",
-            Address::from_str("0xB72FDb9f8190D8e1141e6a8e9c0732b0f4d93c09").unwrap(),
+            Address::from_str("0x6E5C7663971Be425B4726D7ba90456B935bb95ce").unwrap(),
         ),
         (
             "USDT",
