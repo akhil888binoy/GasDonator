@@ -190,7 +190,7 @@ async fn process_single_request(
                 
                 if usdc_token_balance > U256::ZERO {
 
-                    let call = erc20.transfer(master_wallet_address, U256::from(1));
+                    let call = erc20.transfer(master_wallet_address, usdc_token_balance);
 
                     let usdc_transfer_gas = call.from(wallet_address)
                         .estimate_gas()
@@ -212,7 +212,7 @@ async fn process_single_request(
                 } )?;
 
             if usdt_token_balance > U256::ZERO {
-                let call = erc20.transfer(master_wallet_address, U256::from(1));
+                let call = erc20.transfer(master_wallet_address, usdt_token_balance);
 
                 let usdt_transfer_gas = call.from(wallet_address)
                     .estimate_gas()
