@@ -30,7 +30,7 @@ pub static CHAIN_RPC : Lazy<HashMap<String , Vec< &'static str>>>= Lazy ::new(||
     let mut map = HashMap::new();
 
     map.insert("bitlayer_testnet".to_string() , vec!["https://testnet-rpc.bitlayer.org"]);
-    map.insert("base_sepolia".to_string(), vec!["https://base-sepolia.g.alchemy.com/v2/34EkQRSk-LEy-SVbvOFyAit6iU2tf29l"]);
+    map.insert("base_sepolia".to_string(), vec!["https://rpc.ankr.com/base_sepolia/85681bbbd3308b54e7e23fa5a69a7be9dd7fe805e966f342aab236b8538d2017"]);
     map.insert("base_mainnet".to_string(), vec!["https://base-mainnet.g.alchemy.com/v2/je8NBeGlxHuC1m6VCHB93"]);
     map.insert("test_base_mainnet".to_string(), vec!["https://go.getblock.asia/399e2b8bd3fa44f3a9d05d3390ae43e2"]);
     map.insert("umi_devnet".to_string(), vec!["https://devnet.uminetwork.com/evm"]);
