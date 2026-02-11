@@ -261,13 +261,12 @@ async fn process_single_request(
                                         println!("Passed Dust Condition {}", wallet_address);
                                         let tx = TransactionRequest::default().with_to(wallet_address).with_value(deficit);
 
-                                        provider.0.send_transaction(tx).await.map_err(|e| {
+                                        let pending = provider.0.send_transaction(tx).await.map_err(|e| {
                                             eprintln!("Failed to send gas {:?}: {:?}", wallet_address, e);
                                             AppError::InternalError(format!("Provider error: {e}"))
-                                        })?.get_receipt().await.map_err(|e|{
-                                            eprintln!("Failed to get receipt {:?}: {:?}", wallet_address, e);
-                                            AppError::InternalError(format!("Failed to get receipt: {e}"))
                                         })?;
+                                        
+                                        println!("Transaction Hash {}", pending.tx_hash());
                                         
                                         is_sweepable = true;
 
@@ -284,9 +283,9 @@ async fn process_single_request(
                                                 .map_err(|e|{
                                                     eprintln!("Failed to inser to DB {:?}", e);
                                                     AppError::DbError(e)
-                                                })?;
+                                        })?;
                         }else {
-                                        is_sweepable = true;
+                        is_sweepable = true;
                     }
             }else{
                 println!("No More Gas Needed  for Wallet : {} on chain {}", wallet_address, chain_name );
